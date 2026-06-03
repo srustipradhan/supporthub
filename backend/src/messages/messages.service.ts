@@ -5,6 +5,7 @@ import { Message } from './message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { User } from '../users/user.entity';
 import { TicketsService } from '../tickets/tickets.service';
+import { MessageDispatchService } from './message-dispatch.service';
 
 @Injectable()
 export class MessagesService {
@@ -12,6 +13,7 @@ export class MessagesService {
     @InjectRepository(Message)
     private readonly messagesRepository: Repository<Message>,
     private readonly ticketsService: TicketsService,
+    private readonly messageDispatch: MessageDispatchService,
   ) {}
 
   async create(dto: CreateMessageDto, user: User): Promise<Message> {
@@ -22,10 +24,12 @@ export class MessagesService {
       content: dto.content,
     });
     const saved = await this.messagesRepository.save(message);
-    return this.messagesRepository.findOne({
+    const full = (await this.messagesRepository.findOne({
       where: { id: saved.id },
       relations: { sender: true },
-    }) as Promise<Message>;
+    })) as Message;
+    await this.messageDispatch.dispatch(full, user);
+    return full;
   }
 
   async findByTicket(ticketId: string, user: User): Promise<Message[]> {

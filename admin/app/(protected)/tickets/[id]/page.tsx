@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ticketsService } from '@/services/tickets.service';
-import { TicketChat } from '@/components/tickets/TicketChat';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -106,23 +105,22 @@ export default function TicketDetailPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card title="Description" className="lg:col-span-1">
-          <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
-            {ticket.description}
+      <Card title="Description" className="mt-6 max-w-3xl">
+        <p className="whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+          {ticket.description}
+        </p>
+        <div className="mt-6 border-t border-slate-200 pt-6 dark:border-slate-700">
+          <p className="text-sm text-slate-500">
+            Messages are handled in the Chat section.
           </p>
-        </Card>
-        <div className="lg:col-span-2">
-          <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">
-            Conversation
-          </h2>
-          <TicketChat
-            ticketId={ticket.id}
-            status={ticket.status}
-            initialMessages={ticket.messages}
-          />
+          <Link
+            href={`/chat/${ticket.id}`}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Open conversation →
+          </Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

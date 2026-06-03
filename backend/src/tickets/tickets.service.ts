@@ -42,6 +42,13 @@ export class TicketsService {
     });
   }
 
+  async findById(id: string): Promise<Ticket | null> {
+    return this.ticketsRepository.findOne({
+      where: { id },
+      relations: { user: true },
+    });
+  }
+
   async findOne(id: string, user: User): Promise<Ticket> {
     const ticket = await this.ticketsRepository.findOne({
       where: { id },

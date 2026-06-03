@@ -56,8 +56,13 @@ export function TicketChat({
     e.preventDefault();
     if (!content.trim() || status === 'CLOSED') return;
     setSending(true);
+    const text = content.trim();
     try {
-      socketService.sendMessage(ticketId, content.trim());
+      const saved = await messagesService.send(ticketId, text);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === saved.id)) return prev;
+        return [...prev, saved];
+      });
       setContent('');
     } catch (err) {
       console.error(err);

@@ -4,6 +4,7 @@ class ApiConstants {
   static const ticketsMy = '/tickets/my';
   static const tickets = '/tickets';
   static const messages = '/messages';
+  static const usersFcmToken = '/users/fcm-token';
   static String ticketById(String id) => '/tickets/$id';
   static String messagesByTicket(String ticketId) =>
       '/messages/ticket/$ticketId';

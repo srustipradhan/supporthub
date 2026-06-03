@@ -7,7 +7,7 @@ import '../widgets/app_logo.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/loading_overlay.dart';
-import 'home_screen.dart';
+import 'main_shell_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -42,7 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     if (success) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShellScreen()),
         (_) => false,
       );
     }

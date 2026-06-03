@@ -7,7 +7,7 @@ import '../widgets/app_logo.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/loading_overlay.dart';
-import 'home_screen.dart';
+import 'main_shell_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (success) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShellScreen()),
       );
     }
   }

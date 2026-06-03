@@ -4,12 +4,15 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from '../messages/messages.service';
+import { MessageDispatchService } from '../messages/message-dispatch.service';
+import { RealtimeMessagingService } from '../realtime/realtime-messaging.service';
 import { UsersService } from '../users/users.service';
 import { Logger } from '@nestjs/common';
 
@@ -17,7 +20,9 @@ import { Logger } from '@nestjs/common';
   cors: { origin: '*' },
   namespace: '/chat',
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -26,8 +31,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
     private readonly messagesService: MessagesService,
+    private readonly messageDispatch: MessageDispatchService,
+    private readonly realtime: RealtimeMessagingService,
     private readonly usersService: UsersService,
   ) {}
+
+  afterInit() {
+    this.realtime.attachServer(this.server);
+    this.logger.log('Chat WebSocket gateway ready');
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -89,23 +101,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       user,
     );
 
-    const payload = {
-      id: message.id,
-      ticketId: message.ticketId,
-      senderId: message.senderId,
-      content: message.content,
-      createdAt: message.createdAt,
-      sender: {
-        id: message.sender?.id,
-        name: message.sender?.name,
-        email: message.sender?.email,
-        role: message.sender?.role,
-      },
-    };
-
-    const room = `ticket:${data.ticketId}`;
-    this.server.to(room).emit('new_message', payload);
-
+    const payload = this.messageDispatch.toPayload(message);
     return { event: 'message_sent', data: payload };
   }
 }

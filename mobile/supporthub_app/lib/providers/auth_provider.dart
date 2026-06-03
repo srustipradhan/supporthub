@@ -3,6 +3,8 @@ import '../core/config/app_config.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/fcm_service.dart';
+import '../services/notification_service.dart';
 import '../services/socket_service.dart';
 import '../services/storage_service.dart';
 
@@ -17,7 +19,22 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
 
   AuthProvider(ApiService api, this._socketService)
-      : _authService = AuthService(api);
+      : _authService = AuthService(api),
+        _api = api,
+        _fcmService = FcmService(api) {
+    _syncPushIfLoggedIn();
+  }
+
+  final ApiService _api;
+  final FcmService _fcmService;
+
+  /// Register FCM token when app restarts with a stored JWT.
+  Future<void> _syncPushIfLoggedIn() async {
+    final storedToken = await _storage.getToken();
+    if (storedToken == null) return;
+    NotificationService().attachApiForTokenSync(_api);
+    await _fcmService.syncToken();
+  }
 
   User? get user => _user;
   String? get token => _token;
@@ -39,6 +56,7 @@ class AuthProvider extends ChangeNotifier {
         _token = storedToken;
         _user = storedUser;
         _socketService.connect(storedToken);
+        await _registerPush();
       }
     } catch (e, st) {
       debugPrint('checkAuth failed: $e\n$st');
@@ -58,6 +76,7 @@ class AuthProvider extends ChangeNotifier {
       _token = auth.accessToken;
       _user = auth.user;
       _socketService.connect(auth.accessToken);
+      await _registerPush();
       _error = null;
       notifyListeners();
       return true;
@@ -78,6 +97,7 @@ class AuthProvider extends ChangeNotifier {
       _token = auth.accessToken;
       _user = auth.user;
       _socketService.connect(auth.accessToken);
+      await _registerPush();
       _error = null;
       notifyListeners();
       return true;
@@ -91,6 +111,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _fcmService.clearToken();
     await _authService.logout();
     _socketService.disconnect();
     _token = null;
@@ -106,5 +127,10 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  Future<void> _registerPush() async {
+    NotificationService().attachApiForTokenSync(_api);
+    await _fcmService.syncToken();
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { Role } from '../common/enums/role.enum';
 
@@ -34,6 +34,15 @@ export class UsersService {
 
   async count(): Promise<number> {
     return this.usersRepository.count();
+  }
+
+  async findByRoleWithFcm(role: Role): Promise<User[]> {
+    return this.usersRepository.find({
+      where: {
+        role,
+        fcmToken: Not(IsNull()),
+      },
+    });
   }
 
   async updateFcmToken(userId: string, token: string | null): Promise<User> {

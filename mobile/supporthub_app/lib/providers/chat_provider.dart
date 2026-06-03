@@ -10,6 +10,7 @@ class ChatProvider extends ChangeNotifier {
 
   List<Message> _messages = [];
   bool _isLoading = false;
+  bool _isSending = false;
   String? _error;
   String? _currentTicketId;
 
@@ -18,6 +19,7 @@ class ChatProvider extends ChangeNotifier {
 
   List<Message> get messages => _messages;
   bool get isLoading => _isLoading;
+  bool get isSending => _isSending;
   String? get error => _error;
 
   Future<void> loadMessages(String ticketId) async {
@@ -37,14 +39,13 @@ class ChatProvider extends ChangeNotifier {
 
   void joinTicket(String ticketId, String token) {
     _socketService.connect(token);
-    _socketService.joinTicket(ticketId);
+    _socketService.whenReady(() {
+      _socketService.joinTicket(ticketId);
+    });
     _socketService.offNewMessage();
     _socketService.onNewMessage((message) {
       if (message.ticketId == ticketId) {
-        if (!_messages.any((m) => m.id == message.id)) {
-          _messages.add(message);
-          notifyListeners();
-        }
+        _addMessageIfNew(message);
       }
     });
   }
@@ -55,15 +56,46 @@ class ChatProvider extends ChangeNotifier {
     _currentTicketId = null;
   }
 
-  Future<void> sendMessage(String ticketId, String content) async {
-    if (content.trim().isEmpty) return;
-    _socketService.sendMessage(ticketId, content.trim());
+  Future<bool> sendMessage(String ticketId, String content) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return false;
+
+    _isSending = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final message = await _messageService.sendMessage(
+        ticketId: ticketId,
+        content: trimmed,
+      );
+      _addMessageIfNew(message);
+      _isSending = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isSending = false;
+      notifyListeners();
+      if (kDebugMode) {
+        debugPrint('ChatProvider send failed: $e');
+      }
+      return false;
+    }
+  }
+
+  void _addMessageIfNew(Message message) {
+    if (!_messages.any((m) => m.id == message.id)) {
+      _messages.add(message);
+      notifyListeners();
+    }
   }
 
   @override
   void dispose() {
     if (_currentTicketId != null) {
       _socketService.leaveTicket(_currentTicketId!);
+      _socketService.offNewMessage();
     }
     super.dispose();
   }

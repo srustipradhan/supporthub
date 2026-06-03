@@ -4,7 +4,7 @@ import '../core/config/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/app_logo.dart';
-import 'home_screen.dart';
+import 'main_shell_screen.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -40,7 +40,8 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isLoggedIn ? const HomeScreen() : const LoginScreen(),
+          builder: (_) =>
+              isLoggedIn ? const MainShellScreen() : const LoginScreen(),
         ),
       );
     } catch (e, st) {
