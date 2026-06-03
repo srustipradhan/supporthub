@@ -63,6 +63,8 @@ npm run dev -- -p 3001
 
 Update `.env.local` if needed.
 
+**Vercel / production:** Without `.env.local`, production builds use `https://supporthub-th9v.onrender.com` automatically. You can override with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` in the Vercel dashboard (redeploy after changing).
+
 ### 4. Flutter App
 
 ```bash

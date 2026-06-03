@@ -15,7 +15,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-  await NotificationService.showMessageNotification(message);
+  await NotificationService.showPushNotification(message);
   debugPrint('FCM background message: ${message.messageId}');
 }
 
@@ -25,15 +25,26 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._();
 
-  static const String channelId = 'supporthub_channel';
+  static const String messageChannelId = 'supporthub_channel';
+  static const String ticketChannelId = 'supporthub_tickets_channel';
 
   static bool _backgroundHandlerRegistered = false;
+
+  /// Called when a ticket lifecycle push arrives (created/closed/reopened).
+  static VoidCallback? onTicketPush;
 
   FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   bool get isReady => _messaging != null;
+
+  static bool isTicketNotification(RemoteMessage message) {
+    final category = message.data['category'];
+    if (category == 'ticket') return true;
+    final type = message.data['type'] ?? '';
+    return type.startsWith('ticket_');
+  }
 
   Future<void> initialize() async {
     if (Firebase.apps.isEmpty) {
@@ -96,14 +107,29 @@ class NotificationService {
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
+
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
-        channelId,
-        'SupportHub Notifications',
-        description: 'Ticket replies and updates',
+        messageChannelId,
+        'Chat messages',
+        description: 'New replies in support conversations',
         importance: Importance.high,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        ticketChannelId,
+        'Ticket updates',
+        description: 'Ticket created, closed, or reopened',
+        importance: Importance.high,
+      ),
+    );
+
+    final notificationsGranted =
+        await androidPlugin?.requestNotificationsPermission();
+    if (kDebugMode) {
+      debugPrint('Android POST_NOTIFICATIONS granted: $notificationsGranted');
+    }
   }
 
   Future<void> _requestPermission() async {
@@ -126,17 +152,24 @@ class NotificationService {
   }
 
   void _showForegroundNotification(RemoteMessage message) {
+    if (isTicketNotification(message)) {
+      onTicketPush?.call();
+    }
     unawaited(
-      showMessageNotification(message, plugin: _localNotifications),
+      showPushNotification(message, plugin: _localNotifications),
     );
   }
 
   /// Shared foreground/background display logic.
-  static Future<void> showMessageNotification(
+  static Future<void> showPushNotification(
     RemoteMessage message, {
     FlutterLocalNotificationsPlugin? plugin,
   }) async {
     final notifications = plugin ?? FlutterLocalNotificationsPlugin();
+    final isTicket = isTicketNotification(message);
+    final channelId = isTicket ? ticketChannelId : messageChannelId;
+    final channelName =
+        isTicket ? 'Ticket updates' : 'Chat messages';
 
     if (plugin == null) {
       const androidSettings =
@@ -148,9 +181,9 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       await androidPlugin?.createNotificationChannel(
-        const AndroidNotificationChannel(
+        AndroidNotificationChannel(
           channelId,
-          'SupportHub Notifications',
+          channelName,
           importance: Importance.high,
         ),
       );
@@ -159,11 +192,11 @@ class NotificationService {
     final notification = message.notification;
     final title = notification?.title ??
         message.data['title'] ??
-        'SupportHub';
+        (isTicket ? 'Ticket update' : 'SupportHub');
     final body = notification?.body ??
         message.data['body'] ??
         message.data['content'] ??
-        'New message';
+        (isTicket ? 'Your ticket status changed' : 'New message');
 
     await notifications.show(
       message.hashCode,
@@ -172,7 +205,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           channelId,
-          'SupportHub Notifications',
+          channelName,
           importance: Importance.high,
           priority: Priority.high,
         ),
@@ -183,5 +216,8 @@ class NotificationService {
 
   void _handleNotificationTap(RemoteMessage message) {
     debugPrint('Notification tapped: ${message.data}');
+    if (isTicketNotification(message)) {
+      onTicketPush?.call();
+    }
   }
 }

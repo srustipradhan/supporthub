@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   ServiceUnavailableException,
   UseGuards,
@@ -11,21 +13,64 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
 import { PushNotificationService } from './push-notification.service';
+import { AppNotificationsService } from './app-notifications.service';
 
 @ApiTags('Notifications')
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly pushService: PushNotificationService) {}
+  constructor(
+    private readonly pushService: PushNotificationService,
+    private readonly appNotifications: AppNotificationsService,
+  ) {}
 
   @Get('status')
   @ApiOperation({ summary: 'Check if server push (FCM) is configured' })
   status() {
+    const diagnostics = this.pushService.getConfigDiagnostics();
+    const pushEnabled = this.pushService.isEnabled();
     return {
-      pushEnabled: this.pushService.isEnabled(),
-      hint: this.pushService.isEnabled()
+      pushEnabled,
+      diagnostics,
+      hint: pushEnabled
         ? 'Server can send FCM push notifications'
-        : 'Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH (see .env.example)',
+        : diagnostics.hasJsonEnv
+          ? 'FIREBASE_SERVICE_ACCOUNT_JSON is set but invalid — re-run: npm run firebase:render-env and paste one line on Render'
+          : 'On Render set FIREBASE_SERVICE_ACCOUNT_JSON (not PATH). Locally use backend/firebase-service-account.json + FIREBASE_SERVICE_ACCOUNT_PATH',
     };
+  }
+
+  @Get('inbox')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Ticket activity notifications for current user' })
+  inbox(@CurrentUser() user: User) {
+    return this.appNotifications.findForUser(user.id);
+  }
+
+  @Get('unread-count')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Unread ticket notification count' })
+  async unreadCount(@CurrentUser() user: User) {
+    const count = await this.appNotifications.countUnread(user.id);
+    return { count };
+  }
+
+  @Patch(':id/read')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Mark one notification as read' })
+  markRead(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.appNotifications.markRead(id, user.id);
+  }
+
+  @Patch('read-all')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  async markAllRead(@CurrentUser() user: User) {
+    await this.appNotifications.markAllRead(user.id);
+    return { ok: true };
   }
 
   @Post('test')
@@ -46,11 +91,12 @@ export class NotificationsController {
       );
     }
 
-    await this.pushService.sendNewMessageNotification(
+    await this.pushService.sendPushNotification(
       user.fcmToken,
       'SupportHub test',
       'If you see this, push notifications are working.',
-      { type: 'test', ticketId: '' },
+      { type: 'test', ticketId: '', category: 'ticket' },
+      'supporthub_tickets_channel',
     );
 
     return { ok: true, message: 'Test notification sent' };

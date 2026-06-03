@@ -2,11 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
+import '../services/notification_test_service.dart';
 import '../widgets/app_panel.dart';
 import 'login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _testingPush = false;
+
+  Future<void> _testPush() async {
+    setState(() => _testingPush = true);
+    try {
+      final msg = await NotificationTestService(context.read<ApiService>())
+          .sendTestPush();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.red600,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _testingPush = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +99,23 @@ class ProfileScreen extends StatelessWidget {
             _InfoRow(label: 'Name', value: user?.name ?? '-'),
             _InfoRow(label: 'Email', value: user?.email ?? '-'),
             _InfoRow(label: 'Role', value: user?.role ?? '-'),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _testingPush ? null : _testPush,
+                icon: _testingPush
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.notifications_active_outlined),
+                label: Text(
+                  _testingPush ? 'Sending…' : 'Test push notification',
+                ),
+              ),
+            ),
             const Spacer(),
             SizedBox(
               width: double.infinity,

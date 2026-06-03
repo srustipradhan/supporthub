@@ -4,7 +4,8 @@ abstract final class AppConfig {
   static const String productionApiUrl = 'https://supporthub-th9v.onrender.com';
 
   /// When true, opens LoginScreen directly (skips splash auth check).
-  static const bool bypassStartupDependencies = true;
+  /// Use only for local UI work without API; keep false for normal runs.
+  static const bool bypassStartupDependencies = false;
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_URL',

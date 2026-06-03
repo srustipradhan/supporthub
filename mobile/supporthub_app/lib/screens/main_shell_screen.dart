@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
+import '../providers/notification_provider.dart';
 import '../providers/ticket_provider.dart';
+import '../services/notification_service.dart';
 import '../widgets/app_logo.dart';
 import 'chat_list_screen.dart';
 import 'create_ticket_screen.dart';
 import 'home_screen.dart';
+import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
 class MainShellScreen extends StatefulWidget {
@@ -21,7 +24,40 @@ class _MainShellScreenState extends State<MainShellScreen> {
   static const _titles = ['My Tickets', 'Chat'];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notifications = context.read<NotificationProvider>();
+      notifications.refresh();
+      NotificationService.onTicketPush = () {
+        if (mounted) notifications.refresh();
+      };
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationService.onTicketPush = null;
+    super.dispose();
+  }
+
+  void _openNotifications() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        )
+        .then((_) {
+          if (mounted) {
+            context.read<NotificationProvider>().refresh();
+          }
+        });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final unread = context.watch<NotificationProvider>().unreadCount;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -54,6 +90,44 @@ class _MainShellScreenState extends State<MainShellScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.zinc400,
+                        ),
+                        tooltip: 'Ticket updates',
+                        onPressed: _openNotifications,
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.indigo600,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              unread > 9 ? '9+' : '$unread',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   IconButton(
                     icon: const Icon(
@@ -94,6 +168,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 if (created == true) {
                   if (!context.mounted) return;
                   context.read<TicketProvider>().fetchTickets();
+                  context.read<NotificationProvider>().refresh();
                 }
               },
               icon: const Icon(Icons.add),

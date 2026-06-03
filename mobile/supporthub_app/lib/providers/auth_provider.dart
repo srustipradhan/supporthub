@@ -51,13 +51,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final storedToken = await _storage.getToken();
+      if (storedToken == null) return false;
+
       final storedUser = await _storage.getUser();
-      if (storedToken != null && storedUser != null) {
-        _token = storedToken;
-        _user = storedUser;
-        _socketService.connect(storedToken);
-        await _registerPush();
-      }
+      _token = storedToken;
+      _user = storedUser;
+      _socketService.connect(storedToken);
+      await _registerPush();
     } catch (e, st) {
       debugPrint('checkAuth failed: $e\n$st');
       _token = null;

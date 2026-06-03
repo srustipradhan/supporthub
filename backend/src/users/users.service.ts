@@ -45,6 +45,10 @@ export class UsersService {
     });
   }
 
+  async findByRole(role: Role): Promise<User[]> {
+    return this.usersRepository.find({ where: { role } });
+  }
+
   async updateFcmToken(userId: string, token: string | null): Promise<User> {
     const user = await this.findById(userId);
     if (!user) {

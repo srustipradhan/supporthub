@@ -39,15 +39,54 @@ export class PushNotificationService implements OnModuleInit {
     }
   }
 
-  private loadServiceAccount(): admin.ServiceAccount | null {
-    const jsonInline = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
-    if (jsonInline) {
+  /** Exposed for /notifications/status diagnostics (no secrets). */
+  getConfigDiagnostics(): {
+    hasJsonEnv: boolean;
+    hasPathEnv: boolean;
+    pathFileExists: boolean;
+    defaultFileExists: boolean;
+  } {
+    const pathFromEnv = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
+    const defaultPath = join(process.cwd(), 'firebase-service-account.json');
+    const jsonRaw = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
+    return {
+      hasJsonEnv: Boolean(jsonRaw?.trim()),
+      hasPathEnv: Boolean(pathFromEnv?.trim()),
+      pathFileExists: pathFromEnv ? existsSync(pathFromEnv) : false,
+      defaultFileExists: existsSync(defaultPath),
+    };
+  }
+
+  private parseInlineJson(raw: string): admin.ServiceAccount | null {
+    let value = raw.trim();
+    if (
+      (value.startsWith("'") && value.endsWith("'")) ||
+      (value.startsWith('"') && value.endsWith('"') && value[1] === '{')
+    ) {
+      value = value.slice(1, -1);
+    }
+    try {
+      return JSON.parse(value) as admin.ServiceAccount;
+    } catch {
+      // Render sometimes stores base64
       try {
-        return JSON.parse(jsonInline) as admin.ServiceAccount;
+        const decoded = Buffer.from(value, 'base64').toString('utf8');
+        return JSON.parse(decoded) as admin.ServiceAccount;
       } catch {
-        this.logger.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON');
         return null;
       }
+    }
+  }
+
+  private loadServiceAccount(): admin.ServiceAccount | null {
+    const jsonInline = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
+    if (jsonInline?.trim()) {
+      const parsed = this.parseInlineJson(jsonInline);
+      if (parsed) return parsed;
+      this.logger.error(
+        'FIREBASE_SERVICE_ACCOUNT_JSON is set but not valid JSON. Paste one line from: npm run firebase:render-env',
+      );
+      return null;
     }
 
     const pathFromEnv = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
@@ -80,6 +119,22 @@ export class PushNotificationService implements OnModuleInit {
     body: string,
     data: Record<string, string>,
   ): Promise<void> {
+    return this.sendPushNotification(
+      fcmToken,
+      title,
+      body,
+      data,
+      'supporthub_channel',
+    );
+  }
+
+  async sendPushNotification(
+    fcmToken: string,
+    title: string,
+    body: string,
+    data: Record<string, string>,
+    channelId = 'supporthub_channel',
+  ): Promise<void> {
     if (!this.enabled) {
       this.logger.warn(
         'Push skipped — configure FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH (see .env.example)',
@@ -100,7 +155,7 @@ export class PushNotificationService implements OnModuleInit {
         android: {
           priority: 'high',
           notification: {
-            channelId: 'supporthub_channel',
+            channelId,
             priority: 'high' as const,
           },
         },

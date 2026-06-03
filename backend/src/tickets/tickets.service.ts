@@ -10,12 +10,14 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { Role } from '../common/enums/role.enum';
 import { User } from '../users/user.entity';
+import { TicketEventsService } from '../notifications/ticket-events.service';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketsRepository: Repository<Ticket>,
+    private readonly ticketEvents: TicketEventsService,
   ) {}
 
   async create(dto: CreateTicketDto, user: User): Promise<Ticket> {
@@ -24,7 +26,10 @@ export class TicketsService {
       userId: user.id,
       status: TicketStatus.OPEN,
     });
-    return this.ticketsRepository.save(ticket);
+    const saved = await this.ticketsRepository.save(ticket);
+    const withUser = (await this.findById(saved.id)) as Ticket;
+    await this.ticketEvents.onTicketCreated(withUser, user);
+    return withUser;
   }
 
   async findByUser(userId: string): Promise<Ticket[]> {
@@ -72,13 +77,17 @@ export class TicketsService {
   async close(id: string, user: User): Promise<Ticket> {
     const ticket = await this.findOne(id, user);
     ticket.status = TicketStatus.CLOSED;
-    return this.ticketsRepository.save(ticket);
+    const saved = await this.ticketsRepository.save(ticket);
+    await this.ticketEvents.onTicketClosed(saved, user);
+    return saved;
   }
 
   async reopen(id: string, user: User): Promise<Ticket> {
     const ticket = await this.findOne(id, user);
     ticket.status = TicketStatus.OPEN;
-    return this.ticketsRepository.save(ticket);
+    const saved = await this.ticketsRepository.save(ticket);
+    await this.ticketEvents.onTicketReopened(saved, user);
+    return saved;
   }
 
   async count(): Promise<number> {

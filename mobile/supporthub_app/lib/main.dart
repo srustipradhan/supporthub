@@ -6,6 +6,7 @@ import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/ticket_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -47,6 +48,9 @@ class SupportHubApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => TicketProvider(apiService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider(apiService),
         ),
       ],
       child: MaterialApp(

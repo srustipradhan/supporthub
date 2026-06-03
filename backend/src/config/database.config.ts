@@ -3,8 +3,9 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { User } from '../users/user.entity';
 import { Ticket } from '../tickets/ticket.entity';
 import { Message } from '../messages/message.entity';
+import { AppNotification } from '../notifications/app-notification.entity';
 
-const entities = [User, Ticket, Message];
+const entities = [User, Ticket, Message, AppNotification];
 
 /** Neon and other cloud Postgres require SSL. */
 const neonSsl = {
