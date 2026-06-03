@@ -7,9 +7,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { MessagesModule } from './messages/messages.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { WebsocketModule } from './websocket/websocket.module';
-import { User } from './users/user.entity';
-import { Ticket } from './tickets/ticket.entity';
-import { Message } from './messages/message.entity';
+import { buildTypeOrmConfig } from './config/database.config';
 
 @Module({
   imports: [
@@ -17,16 +15,7 @@ import { Message } from './messages/message.entity';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST', 'localhost'),
-        port: parseInt(config.get('DB_PORT', '5432'), 10),
-        username: config.get('DB_USERNAME', 'postgres'),
-        password: config.get('DB_PASSWORD', ''),
-        database: config.get('DB_DATABASE', 'supporthub'),
-        entities: [User, Ticket, Message],
-        synchronize: true,
-      }),
+      useFactory: (config: ConfigService) => buildTypeOrmConfig(config),
     }),
     AuthModule,
     UsersModule,
