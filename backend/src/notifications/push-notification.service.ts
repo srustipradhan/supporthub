@@ -88,21 +88,28 @@ export class PushNotificationService implements OnModuleInit {
     }
     if (!fcmToken) return;
 
+    const dataPayload = Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, String(v ?? '')]),
+    );
+
     try {
       await admin.messaging().send({
         token: fcmToken,
         notification: { title, body },
-        data,
+        data: dataPayload,
         android: {
           priority: 'high',
           notification: {
             channelId: 'supporthub_channel',
+            priority: 'high' as const,
           },
         },
       });
-      this.logger.log(`Push sent: "${title}"`);
+      this.logger.log(`Push sent: "${title}" → …${fcmToken.slice(-8)}`);
     } catch (err) {
-      this.logger.warn(`Push failed for token …${fcmToken.slice(-8)}: ${err}`);
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Push failed for token …${fcmToken.slice(-8)}: ${message}`);
+      throw err;
     }
   }
 }

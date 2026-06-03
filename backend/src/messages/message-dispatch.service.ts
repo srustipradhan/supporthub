@@ -47,7 +47,9 @@ export class MessageDispatchService {
     content: string,
   ): Promise<void> {
     if (!this.pushService.isEnabled()) {
-      this.logger.debug('Push skipped (Firebase Admin not configured on server)');
+      this.logger.warn(
+        'Push skipped — add backend/firebase-service-account.json or FIREBASE_SERVICE_ACCOUNT_JSON on Render',
+      );
       return;
     }
 
@@ -60,29 +62,41 @@ export class MessageDispatchService {
 
       if (ticket.userId !== sender.id) {
         const owner = await this.usersService.findById(ticket.userId);
-        if (owner?.fcmToken) {
-          await this.pushService.sendNewMessageNotification(
-            owner.fcmToken,
-            'New reply on your ticket',
-            `${sender.name}: ${preview}`,
-            { ticketId, type: 'new_message' },
+        if (!owner?.fcmToken) {
+          this.logger.warn(
+            `Push not sent — ticket owner has no FCM token (user ${owner?.email ?? ticket.userId})`,
           );
+          return;
         }
+        await this.pushService.sendNewMessageNotification(
+          owner.fcmToken,
+          'New reply on your ticket',
+          `${sender.name}: ${preview}`,
+          { ticketId, type: 'new_message' },
+        );
         return;
       }
 
       const admins = await this.usersService.findByRoleWithFcm(Role.ADMIN);
-      for (const admin of admins) {
-        if (admin.id === sender.id || !admin.fcmToken) continue;
+      const targets = admins.filter(
+        (a) => a.id !== sender.id && a.fcmToken,
+      );
+      if (targets.length === 0) {
+        this.logger.warn(
+          'Push not sent — no admin has the mobile app with notifications (admin FCM token missing)',
+        );
+        return;
+      }
+      for (const admin of targets) {
         await this.pushService.sendNewMessageNotification(
-          admin.fcmToken,
+          admin.fcmToken!,
           'New ticket message',
           `${sender.name}: ${preview}`,
           { ticketId, type: 'new_message' },
         );
       }
     } catch (err) {
-      this.logger.warn(`Push notify skipped: ${err}`);
+      this.logger.warn(`Push notify failed: ${err}`);
     }
   }
 }
