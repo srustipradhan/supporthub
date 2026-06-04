@@ -10,6 +10,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { buildTypeOrmConfig } from './config/database.config';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -28,5 +29,6 @@ import { buildTypeOrmConfig } from './config/database.config';
     WebsocketModule,
     NotificationsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

@@ -38,17 +38,17 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
     try {
       final ticket = await TicketService(context.read<ApiService>())
           .getTicket(widget.ticketId);
+      if (!mounted) return;
       setState(() {
         _ticket = ticket;
         _loadingTicket = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loadingTicket = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 

@@ -3,27 +3,29 @@ import '../core/constants/api_constants.dart';
 import '../models/app_notification.dart';
 import 'api_service.dart';
 
+class InboxSummary {
+  final List<AppNotification> items;
+  final int unreadCount;
+
+  InboxSummary({required this.items, required this.unreadCount});
+}
+
 class AppNotificationService {
   final ApiService _api;
 
   AppNotificationService(this._api);
 
-  Future<List<AppNotification>> fetchInbox() async {
+  Future<InboxSummary> fetchInboxSummary() async {
     try {
       final response = await _api.client.get(ApiConstants.notificationsInbox);
-      return (response.data as List)
+      final data = response.data as Map<String, dynamic>;
+      final items = (data['items'] as List)
           .map((n) => AppNotification.fromJson(n as Map<String, dynamic>))
           .toList();
-    } on DioException catch (e) {
-      throw _api.getErrorMessage(e);
-    }
-  }
-
-  Future<int> fetchUnreadCount() async {
-    try {
-      final response =
-          await _api.client.get(ApiConstants.notificationsUnreadCount);
-      return (response.data as Map<String, dynamic>)['count'] as int? ?? 0;
+      return InboxSummary(
+        items: items,
+        unreadCount: data['unreadCount'] as int? ?? 0,
+      );
     } on DioException catch (e) {
       throw _api.getErrorMessage(e);
     }

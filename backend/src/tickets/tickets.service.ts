@@ -54,19 +54,11 @@ export class TicketsService {
     });
   }
 
-  async findOne(id: string, user: User): Promise<Ticket> {
-    const ticket = await this.ticketsRepository.findOne({
-      where: { id },
-      relations: { user: true, messages: { sender: true } },
-    });
+  /** Lightweight ownership check — no relations loaded. */
+  async assertAccess(id: string, user: User): Promise<Ticket> {
+    const ticket = await this.ticketsRepository.findOne({ where: { id } });
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
-    }
-    if (ticket.messages) {
-      ticket.messages.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
     }
     if (user.role !== Role.ADMIN && ticket.userId !== user.id) {
       throw new ForbiddenException('Access denied');
@@ -74,20 +66,42 @@ export class TicketsService {
     return ticket;
   }
 
+  async findOne(id: string, user: User): Promise<Ticket> {
+    const ticket = await this.ticketsRepository.findOne({
+      where: { id },
+      relations: { user: true },
+    });
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+    if (user.role !== Role.ADMIN && ticket.userId !== user.id) {
+      throw new ForbiddenException('Access denied');
+    }
+    return ticket;
+  }
+
+  async findRecent(limit = 8): Promise<Ticket[]> {
+    return this.ticketsRepository.find({
+      relations: { user: true },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
   async close(id: string, user: User): Promise<Ticket> {
-    const ticket = await this.findOne(id, user);
+    const ticket = await this.assertAccess(id, user);
     ticket.status = TicketStatus.CLOSED;
     const saved = await this.ticketsRepository.save(ticket);
     await this.ticketEvents.onTicketClosed(saved, user);
-    return saved;
+    return (await this.findById(saved.id)) as Ticket;
   }
 
   async reopen(id: string, user: User): Promise<Ticket> {
-    const ticket = await this.findOne(id, user);
+    const ticket = await this.assertAccess(id, user);
     ticket.status = TicketStatus.OPEN;
     const saved = await this.ticketsRepository.save(ticket);
     await this.ticketEvents.onTicketReopened(saved, user);
-    return saved;
+    return (await this.findById(saved.id)) as Ticket;
   }
 
   async count(): Promise<number> {

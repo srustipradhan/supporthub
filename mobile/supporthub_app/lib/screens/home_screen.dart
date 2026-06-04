@@ -17,14 +17,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TicketProvider>().fetchTickets();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final ticketProvider = context.watch<TicketProvider>();
 
@@ -53,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: RefreshIndicator(
             color: AppColors.indigo600,
-            onRefresh: ticketProvider.fetchTickets,
+            onRefresh: () => ticketProvider.fetchTickets(force: true),
             child: _buildBody(ticketProvider),
           ),
         ),
@@ -77,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(builder: (_) => const CreateTicketScreen()),
         );
         if (created == true && mounted) {
-          ticketProvider.fetchTickets();
+          ticketProvider.fetchTickets(force: true);
         }
       },
       icon: const Icon(Icons.add),

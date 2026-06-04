@@ -16,7 +16,10 @@ class TicketProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> fetchTickets() async {
+  Future<void> fetchTickets({bool force = false}) async {
+    if (_isLoading) return;
+    if (!force && _tickets.isNotEmpty) return;
+
     _isLoading = true;
     _error = null;
     notifyListeners();

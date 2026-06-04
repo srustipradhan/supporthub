@@ -57,7 +57,7 @@ class AuthProvider extends ChangeNotifier {
       _token = storedToken;
       _user = storedUser;
       _socketService.connect(storedToken);
-      await _registerPush();
+      _registerPush();
     } catch (e, st) {
       debugPrint('checkAuth failed: $e\n$st');
       _token = null;

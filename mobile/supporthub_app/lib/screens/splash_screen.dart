@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
+import '../services/api_warmup_service.dart';
 import '../widgets/app_logo.dart';
 import 'main_shell_screen.dart';
 import 'login_screen.dart';
@@ -31,12 +33,13 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
+      final api = context.read<ApiService>();
       final auth = context.read<AuthProvider>();
-      final isLoggedIn = await auth
-          .checkAuth()
-          .timeout(const Duration(seconds: 5), onTimeout: () => false);
+
+      final isLoggedIn = await Future.wait([
+        ApiWarmupService.ping(api),
+        auth.checkAuth(),
+      ]).then((results) => results[1] as bool);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(

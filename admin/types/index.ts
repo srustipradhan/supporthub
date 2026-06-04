@@ -39,4 +39,5 @@ export interface DashboardStats {
   totalTickets: number;
   openTickets: number;
   closedTickets: number;
+  recentTickets: Ticket[];
 }

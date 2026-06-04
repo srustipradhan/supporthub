@@ -28,8 +28,12 @@ class _MainShellScreenState extends State<MainShellScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final tickets = context.read<TicketProvider>();
       final notifications = context.read<NotificationProvider>();
-      notifications.refresh();
+      Future.wait([
+        tickets.fetchTickets(),
+        notifications.refresh(),
+      ]);
       NotificationService.onTicketPush = () {
         if (mounted) notifications.refresh();
       };
@@ -167,7 +171,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 );
                 if (created == true) {
                   if (!context.mounted) return;
-                  context.read<TicketProvider>().fetchTickets();
+                  context.read<TicketProvider>().fetchTickets(force: true);
                   context.read<NotificationProvider>().refresh();
                 }
               },

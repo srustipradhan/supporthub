@@ -17,7 +17,7 @@ export class MessagesService {
   ) {}
 
   async create(dto: CreateMessageDto, user: User): Promise<Message> {
-    await this.ticketsService.findOne(dto.ticketId, user);
+    await this.ticketsService.assertAccess(dto.ticketId, user);
     const message = this.messagesRepository.create({
       ticketId: dto.ticketId,
       senderId: user.id,
@@ -33,7 +33,7 @@ export class MessagesService {
   }
 
   async findByTicket(ticketId: string, user: User): Promise<Message[]> {
-    await this.ticketsService.findOne(ticketId, user);
+    await this.ticketsService.assertAccess(ticketId, user);
     return this.messagesRepository.find({
       where: { ticketId },
       relations: { sender: true },

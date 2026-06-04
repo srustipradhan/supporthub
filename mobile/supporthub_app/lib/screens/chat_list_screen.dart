@@ -15,14 +15,6 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TicketProvider>().fetchTickets();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final ticketProvider = context.watch<TicketProvider>();
 
@@ -51,7 +43,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         Expanded(
           child: RefreshIndicator(
             color: AppColors.indigo600,
-            onRefresh: ticketProvider.fetchTickets,
+            onRefresh: () => ticketProvider.fetchTickets(force: true),
             child: _buildBody(ticketProvider),
           ),
         ),

@@ -20,16 +20,15 @@ class NotificationProvider extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> refresh() async {
+    if (_loading) return;
+
     _loading = true;
     _error = null;
     notifyListeners();
     try {
-      final results = await Future.wait([
-        _service.fetchInbox(),
-        _service.fetchUnreadCount(),
-      ]);
-      _items = results[0] as List<AppNotification>;
-      _unreadCount = results[1] as int;
+      final summary = await _service.fetchInboxSummary();
+      _items = summary.items;
+      _unreadCount = summary.unreadCount;
     } catch (e) {
       _error = e.toString();
     } finally {

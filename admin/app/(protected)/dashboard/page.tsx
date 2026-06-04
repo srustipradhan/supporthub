@@ -15,24 +15,20 @@ import { TicketStatusSection } from '@/components/dashboard/TicketStatusSection'
 import { RecentActivityPanel } from '@/components/dashboard/RecentActivityPanel';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { dashboardService } from '@/services/dashboard.service';
-import { ticketsService } from '@/services/tickets.service';
-import type { DashboardStats, Ticket } from '@/types';
+import type { DashboardStats } from '@/types';
 
 const RECENT_TICKETS_LIMIT = 8;
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([dashboardService.getStats(), ticketsService.getAll()])
-      .then(([statsData, ticketsData]) => {
-        setStats(statsData);
-        setTickets(ticketsData);
-      })
+    dashboardService
+      .getStats()
+      .then(setStats)
       .catch((err) => {
         setError(
           err instanceof Error ? err.message : 'Failed to load dashboard',
@@ -60,7 +56,8 @@ export default function DashboardPage() {
     );
   }
 
-  const recentTickets = tickets.slice(0, RECENT_TICKETS_LIMIT);
+  const recentTickets = (stats?.recentTickets ?? []).slice(0, RECENT_TICKETS_LIMIT);
+  const allTickets = stats?.recentTickets ?? [];
   const displayName = user?.name?.split(' ')[0] ?? 'Admin';
 
   return (
@@ -108,7 +105,7 @@ export default function DashboardPage() {
             closedTickets={stats?.closedTickets ?? 0}
             totalTickets={stats?.totalTickets ?? 0}
           />
-          <RecentActivityPanel tickets={tickets} />
+          <RecentActivityPanel tickets={allTickets} />
         </div>
       </div>
     </div>

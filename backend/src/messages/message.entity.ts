@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Ticket } from '../tickets/ticket.entity';
 import { User } from '../users/user.entity';
@@ -15,6 +16,7 @@ export class Message {
   id: string;
 
   @Column()
+  @Index()
   ticketId: string;
 
   @Column()

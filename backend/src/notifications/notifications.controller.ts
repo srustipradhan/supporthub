@@ -44,7 +44,7 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Ticket activity notifications for current user' })
   inbox(@CurrentUser() user: User) {
-    return this.appNotifications.findForUser(user.id);
+    return this.appNotifications.getInboxSummary(user.id);
   }
 
   @Get('unread-count')

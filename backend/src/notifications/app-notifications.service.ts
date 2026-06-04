@@ -38,6 +38,14 @@ export class AppNotificationsService {
     });
   }
 
+  async getInboxSummary(userId: string, limit = 50) {
+    const [items, unreadCount] = await Promise.all([
+      this.findForUser(userId, limit),
+      this.countUnread(userId),
+    ]);
+    return { items, unreadCount };
+  }
+
   async countUnread(userId: string): Promise<number> {
     return this.repo.count({ where: { userId, read: false } });
   }

@@ -23,10 +23,12 @@ function sharedOptions(config: ConfigService): Pick<
   TypeOrmModuleOptions,
   'entities' | 'autoLoadEntities' | 'synchronize'
 > {
+  const isProduction = config.get('NODE_ENV') === 'production';
   return {
     entities,
     autoLoadEntities: true,
-    synchronize: config.get('DB_SYNCHRONIZE', 'true') === 'true',
+    synchronize:
+      config.get('DB_SYNCHRONIZE', isProduction ? 'false' : 'true') === 'true',
   };
 }
 

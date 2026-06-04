@@ -11,12 +11,13 @@ export class DashboardService {
   ) {}
 
   async getStats() {
-    const [totalUsers, totalTickets, openTickets, closedTickets] =
+    const [totalUsers, totalTickets, openTickets, closedTickets, recentTickets] =
       await Promise.all([
         this.usersService.count(),
         this.ticketsService.count(),
         this.ticketsService.countByStatus(TicketStatus.OPEN),
         this.ticketsService.countByStatus(TicketStatus.CLOSED),
+        this.ticketsService.findRecent(8),
       ]);
 
     return {
@@ -24,6 +25,7 @@ export class DashboardService {
       totalTickets,
       openTickets,
       closedTickets,
+      recentTickets,
     };
   }
 }

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -19,6 +20,7 @@ export class AppNotification {
   id: string;
 
   @Column()
+  @Index()
   userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
@@ -37,6 +39,7 @@ export class AppNotification {
   ticketId: string | null;
 
   @Column({ default: false })
+  @Index()
   read: boolean;
 
   @CreateDateColumn()

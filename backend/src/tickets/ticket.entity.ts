@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { User } from '../users/user.entity';
@@ -23,9 +24,11 @@ export class Ticket {
   description: string;
 
   @Column({ type: 'enum', enum: TicketStatus, default: TicketStatus.OPEN })
+  @Index()
   status: TicketStatus;
 
   @Column()
+  @Index()
   userId: string;
 
   @ManyToOne(() => User, (user) => user.tickets, { onDelete: 'CASCADE' })
